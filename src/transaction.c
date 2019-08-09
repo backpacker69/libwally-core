@@ -1117,10 +1117,18 @@ int wally_tx_output_free(struct wally_tx_output *output)
     return tx_output_free(output, true);
 }
 
+#ifdef ENABLE_TIMESTAMP
+int wally_tx_init_alloc(uint32_t version, uint32_t timestamp,
+                        uint32_t locktime,
+                        size_t inputs_allocation_len,
+                        size_t outputs_allocation_len,
+                        struct wally_tx **output)
+#else
 int wally_tx_init_alloc(uint32_t version, uint32_t locktime,
                         size_t inputs_allocation_len,
                         size_t outputs_allocation_len,
                         struct wally_tx **output)
+#endif
 {
     struct wally_tx_input *new_inputs = NULL;
     struct wally_tx_output *new_outputs = NULL;
@@ -1143,6 +1151,9 @@ int wally_tx_init_alloc(uint32_t version, uint32_t locktime,
     }
 
     result->version = version;
+#ifdef ENABLE_TIMESTAMP
+    result->timestamp = timestamp;
+#endif
     result->locktime = locktime;
     result->inputs = new_inputs;
     result->num_inputs = 0;
@@ -1542,6 +1553,9 @@ static int tx_get_lengths(const struct wally_tx *tx,
 
         if (opts->bip143) {
             *base_size = sizeof(uint32_t) + /* version */
+#ifdef ENABLE_TIMESTAMP
+                         sizeof(uint32_t) + /* timestamp */
+#endif
                          SHA256_LEN + /* hash prevouts */
                          SHA256_LEN + /* hash sequence */
                          WALLY_TXHASH_LEN + sizeof(uint32_t) + /* outpoint + index */
@@ -1572,6 +1586,9 @@ static int tx_get_lengths(const struct wally_tx *tx,
         flags &= ~WALLY_TX_FLAG_USE_WITNESS;
 
     n = sizeof(tx->version) +
+#ifdef ENABLE_TIMESTAMP
+        sizeof(tx->timestamp) +
+#endif
         varint_get_length(anyonecanpay ? 1 : tx->num_inputs) +
         (sh_none ? 1 : varint_get_length(sh_single ? opts->index + 1 : tx->num_outputs)) +
         sizeof(tx->locktime) +
@@ -1780,6 +1797,9 @@ static inline int tx_to_bip143_bytes(const struct wally_tx *tx,
 
     /* Note we assume tx_to_bytes has already validated all inputs */
     p += uint32_to_le_bytes(tx->version, p);
+#ifdef ENABLE_TIMESTAMP
+    p += uint32_to_le_bytes(tx->timestamp, p);
+#endif
 
     inputs_size = tx->num_inputs * (WALLY_TXHASH_LEN + sizeof(uint32_t));
     if (sh_none || (sh_single && opts->index >= tx->num_outputs))
@@ -2005,6 +2025,9 @@ static int tx_to_bytes(const struct wally_tx *tx,
     }
 
     p += uint32_to_le_bytes(tx->version, p);
+#ifdef ENABLE_TIMESTAMP
+    p += uint32_to_le_bytes(tx->timestamp, p);
+#endif
     if (is_elements) {
         if (!opts)
             *p++ = flags & WALLY_TX_FLAG_USE_WITNESS ? 1 : 0;
@@ -2213,6 +2236,9 @@ int analyze_tx(const unsigned char *bytes, size_t bytes_len,
         return WALLY_EINVAL;
 
     p += uint32_from_le_bytes(p, &tmp_tx.version);
+#ifdef ENABLE_TIMESTAMP
+    p += uint32_from_le_bytes(p, &tmp_tx.timestamp);
+#endif
 
     if (is_elements)
         *expect_witnesses = *p++ != 0;
@@ -2397,12 +2423,20 @@ static int tx_from_bytes(const unsigned char *bytes, size_t bytes_len,
                    &expect_witnesses) != WALLY_OK)
         return WALLY_EINVAL;
 
+#ifdef ENABLE_TIMESTAMP
+    ret = wally_tx_init_alloc(0, 0, 0, num_inputs, num_outputs, output);
+#else
     ret = wally_tx_init_alloc(0, 0, num_inputs, num_outputs, output);
+#endif
     if (ret != WALLY_OK)
         return ret;
     result = (struct wally_tx *)*output;
 
     p += uint32_from_le_bytes(p, &result->version);
+#ifdef ENABLE_TIMESTAMP
+    p += uint32_from_le_bytes(p, &result->timestamp);
+#endif
+
     if (is_elements)
         p++; /* Skip witness flag */
     else if (expect_witnesses)
@@ -2986,6 +3020,9 @@ GET_TX_I(tx_output, rangeproof_len, size_t)
 #endif /* BUILD_ELEMENTS */
 
 GET_TX_I(tx, version, size_t)
+#ifdef ENABLE_TIMESTAMP
+GET_TX_I(tx, timestamp, size_t)
+#endif
 GET_TX_I(tx, locktime, size_t)
 GET_TX_I(tx, num_inputs, size_t)
 GET_TX_I(tx, num_outputs, size_t)

@@ -120,8 +120,12 @@ AC_ARG_ENABLE(elements,
 AC_ARG_ENABLE(builtin-memset,
     AS_HELP_STRING([--enable-builtin-memset],[disable to add -fno-builtin-memset to compiler flags. helps with explicit_bzero/memset being elided on Linux clang 7.0.1 and up (default: yes)]),
     [builtin_memset=$enableval], [builtin_memset=yes])
+AC_ARG_ENABLE(timestamp,
+    AS_HELP_STRING([--enable-timestamp],[enable timestamp in transactions (default: yes)]),
+    [timestamp=$enableval], [timestamp=yes])
 AM_CONDITIONAL([RUN_TESTS], [test "x$tests" == "xyes"])
 AM_CONDITIONAL([BUILD_ELEMENTS], [test "x$elements" == "xyes"])
+AM_CONDITIONAL([ENABLE_TIMESTAMP], [test "x$timestamp" == "xyes"])
 
 AC_C_BIGENDIAN()
 AC_C_INLINE
@@ -161,6 +165,10 @@ fi
 
 if test "x$builtin_memset" == "xno"; then
     AX_CHECK_COMPILE_FLAG([-fno-builtin-memset], [AM_CFLAGS="$AM_CFLAGS -fno-builtin"])
+fi
+
+if test "x$timestamp" == "xyes"; then
+    AX_CHECK_COMPILE_FLAG([-DENABLE_TIMESTAMP=1], [AM_CFLAGS="$AM_CFLAGS -DENABLE_TIMESTAMP=1"])
 fi
 
 # -flax-vector-conversions is needed for our arm assembly

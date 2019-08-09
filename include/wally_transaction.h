@@ -120,6 +120,9 @@ struct wally_tx_output {
 /** A parsed bitcoin transaction */
 struct wally_tx {
     uint32_t version;
+#ifdef ENABLE_TIMESTAMP
+    uint32_t timestamp;
+#endif
     uint32_t locktime;
     struct wally_tx_input *inputs;
     size_t num_inputs;
@@ -264,6 +267,9 @@ WALLY_CORE_API int wally_tx_output_free(struct wally_tx_output *output);
  */
 WALLY_CORE_API int wally_tx_init_alloc(
     uint32_t version,
+#ifdef ENABLE_TIMESTAMP
+    uint32_t timestamp,
+#endif
     uint32_t locktime,
     size_t inputs_allocation_len,
     size_t outputs_allocation_len,
