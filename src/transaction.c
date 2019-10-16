@@ -3284,7 +3284,7 @@ int clone_tx(struct wally_tx *tx, struct wally_tx **output)
 
     TX_CHECK_OUTPUT;
 
-    if ((ret = wally_tx_init_alloc(tx->version, tx->locktime, tx->num_inputs, tx->num_outputs, &result)) != WALLY_OK) {
+    if ((ret = wally_tx_init_alloc(tx->version, tx->timestamp, tx->locktime, tx->num_inputs, tx->num_outputs, &result)) != WALLY_OK) {
         goto fail;
     }
     for (i = 0; i < tx->num_inputs; ++i) {
